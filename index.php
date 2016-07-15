@@ -39,6 +39,8 @@ table {
     font-weight: bold;
     margin: 20px 0;
 }
+.btnExport {
+}
 .stats {
     background: #EEE;
     border: 1px solid #555;
@@ -77,6 +79,9 @@ table {
 </head>
 <body onload="initialAll()" onkeydown="timestop(event)" onkeyup="timestart(event)" ontouchstart="timestop(event)" ontouchend="timestart(event)">
 <div class="title">@Hank's Stopwatch v<?php echo $appVersion; ?> for Rubik's Cube</div>
+<form id="exportJson" action="export.php" method="post">
+    <input id="jsonField" name="jsonField" type="hidden" />
+</form>
 <hr class="hrs" />
 <div class="stopwatch">00:00.000</div>
 <hr class="hrs" />
@@ -108,31 +113,28 @@ if($isMobile) {
 <table id="tRecord1" class="recordTable" align="center" valign="middle" cellspacing="1" bgcolor="#555">
 <tr id="tridi1" bgcolor="#EEE" align="center">
     <td id="title_id1" style="padding: 5px 10px;">id</td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec1"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec2"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec3"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec4"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec5"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec6"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec7"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec8"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec9"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec10"></td>
+    <?php
+    for($i = 1; $i <= 10; $i++) {
+?>
+    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec<?php echo $i; ?>"></td>
+    <?php
+    }
+?>
 </tr>
 <tr id="trtime1" bgcolor="#EEE" align="center">
     <td id="title_time1" style="padding: 5px 10px;">time</td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec1"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec2"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec3"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec4"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec5"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec6"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec7"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec8"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec9"></td>
-    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec10"></td>
+    <?php
+    for($i = 1; $i <= 10; $i++) {
+?>
+    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec<?php echo $i; ?>"></td>
+    <?php
+    }
+?>
 </tr>
 </table>
+<div id="btnExport" style="opacity: 0;">
+<button id="theBtnExport" onclick="exportExcel()" disabled="true" onfocus="$('#theBtnExport').blur()">Export Records</button>
+</div>
 <?php
 }
 ?>
@@ -143,6 +145,8 @@ var runningStatus = "ready";
 var rubikTime = 0;
 var flagTimeout = 0;
 var recordList = Array();
+var shuffleList = Array();
+var datetimeList = Array();
 var isInited = false;
 
 function initialAll() {
@@ -173,7 +177,9 @@ function timestop(evt) {
                 $("#fBlock").animate({opacity: "1"}, function() {
                     $("#aBlock").animate({opacity: "1"}, function() {
                         $("#sBlock").animate({opacity: "1"}, function() {
-                            $("#tRecord1").animate({opacity: "1"});
+                            $("#tRecord1").animate({opacity: "1"}, function() {
+                                $("#btnExport").animate({opacity: "1"})
+                            });
                         })
                     })
                 });
@@ -260,14 +266,19 @@ function addRecord(timestr) {
 } else {
 ?>
 // PC version
-function addRecord(timestr) { 
+function addRecord(timestr) {
     recordList.push(time2Duration(timestr));
     var recordCount = recordList.length;
+    if(recordCount == 1) {
+        $("#theBtnExport").attr('disabled', false);
+    }
     $("#id_rec" + recordCount.toString()).text(recordCount);
     $("#time_rec" + recordCount.toString()).text(timestr);
     $("#id_rec" + recordCount.toString()).animate({opacity: "1"});
     $("#time_rec" + recordCount.toString()).animate({opacity: "1"});
     refreshStats();
+    shuffleList.push($(".shuffle").text());
+    datetimeList.push(getNowFormatDate());
 }
 <?php
 }
@@ -426,33 +437,48 @@ function createNewTable(num) {
     newTableHTML += '<table id="tRecord' + num.toString() + '" class="recordTable" align="center" valign="middle" cellspacing="1" bgcolor="#555">';
     newTableHTML += '<tr id="trid' + num.toString() + '" bgcolor="#EEE" align="center">';
     newTableHTML += '    <td id="title_id' + num.toString() + '" style="padding: 5px 10px;">id</td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec' + ((num - 1) * 10 + 1).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec' + ((num - 1) * 10 + 2).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec' + ((num - 1) * 10 + 3).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec' + ((num - 1) * 10 + 4).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec' + ((num - 1) * 10 + 5).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec' + ((num - 1) * 10 + 6).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec' + ((num - 1) * 10 + 7).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec' + ((num - 1) * 10 + 8).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec' + ((num - 1) * 10 + 9).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec' + ((num - 1) * 10 + 10).toString() + '"></td>';
+    <?php
+    for($i = 1; $i <= 10; $i++) {
+?>
+    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="id_rec' + ((num - 1) * 10 + <?php echo $i; ?>).toString() + '"></td>';
+    <?php
+    }
+?>
     newTableHTML += '</tr>';
     newTableHTML += '<tr id="trtime' + num.toString() + '" bgcolor="#EEE" align="center">';
     newTableHTML += '    <td id="title_time' + num.toString() + '" style="padding: 5px 10px;">time</td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec' + ((num - 1) * 10 + 1).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec' + ((num - 1) * 10 + 2).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec' + ((num - 1) * 10 + 3).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec' + ((num - 1) * 10 + 4).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec' + ((num - 1) * 10 + 5).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec' + ((num - 1) * 10 + 6).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec' + ((num - 1) * 10 + 7).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec' + ((num - 1) * 10 + 8).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec' + ((num - 1) * 10 + 9).toString() + '"></td>';
-    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec' + ((num - 1) * 10 + 10).toString() + '"></td>';
+    <?php
+    for($i = 1; $i <= 10; $i++) {
+?>
+    newTableHTML += '    <td width="90px" bgcolor="#FFF" align="center" style="" class="record isNormal" id="time_rec' + ((num - 1) * 10 + <?php echo $i; ?>).toString() + '"></td>';
+    <?php
+    }
+?>
     newTableHTML += '</tr>';
     newTableHTML += '</table>';  
     lastTable.before(newTableHTML);
     $("#tRecord" + num.toString()).animate({opacity: "1"});
+}
+
+function getNowFormatDate() {
+    var nowdate = new Date();
+    var nfd = nowdate.getFullYear().toString() + "/" + zeroFill((nowdate.getMonth() + 1).toString(), 2) + "/" + zeroFill(nowdate.getDate().toString(), 2); 
+    nfd += " ";
+    nfd += zeroFill(nowdate.getHours().toString(), 2) + ":" + zeroFill(nowdate.getMinutes().toString(), 2) + ":" + zeroFill(nowdate.getSeconds().toString(), 2);
+    return nfd;
+}
+
+function exportExcel() {
+    if(recordList.length == 0) {
+        alert("There is no records yet...");
+        return;
+    }
+    excelData = {};
+    for(var i = 0; i < recordList.length; i++) {
+        excelData[i] = {"record": duration2Time(recordList[i]), "shuffle": shuffleList[i], "datetime": datetimeList[i]};
+    }
+    $("#jsonField").val(JSON.stringify(excelData));
+    $("#exportJson").submit();
 }
 </script>
 </html>
