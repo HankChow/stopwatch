@@ -1,5 +1,5 @@
 <?php
-$json = object_array(json_decode($_POST['jsonField']));
+$json = object_array(json_decode($_POST['exportJsonField']));
 header("Content-type:application/vnd.ms-excel");
 header("Content-Disposition:filename=record" . date('YmdHis', time()) . ".xls");
 echo "id\t";
