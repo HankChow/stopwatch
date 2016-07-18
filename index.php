@@ -35,11 +35,14 @@ table {
     opacity: 0; 
     display: none;
 }
+.imgChart {
+    display: none;
+}
 .shuffle {
     font-weight: bold;
     margin: 20px 0;
 }
-.btnExport {
+.btns {
 }
 .stats {
     background: #EEE;
@@ -80,10 +83,22 @@ table {
 <body onload="initialAll()" onkeydown="timestop(event)" onkeyup="timestart(event)" ontouchstart="timestop(event)" ontouchend="timestart(event)">
 <div class="title">@Hank's Stopwatch v<?php echo $appVersion; ?> for Rubik's Cube</div>
 <form id="exportJson" action="export.php" method="post">
-    <input id="jsonField" name="jsonField" type="hidden" />
+    <input id="exportJsonField" name="exportJsonField" type="hidden" />
+</form>
+<form id="chartJson" action="chart.php" method="post">
+    <input id="chartJsonField" name="chartJsonField" type="hidden" />
 </form>
 <hr class="hrs" />
 <div class="stopwatch">00:00.000</div>
+<?php
+if(!$isMobile) {
+?>
+<div class="imgChart">
+    <img id="imgChart" src="" />
+</div>
+<?php
+}
+?>
 <hr class="hrs" />
 <div class="shuffle"></div>
 <?php
@@ -132,8 +147,9 @@ if($isMobile) {
 ?>
 </tr>
 </table>
-<div id="btnExport" style="opacity: 0;">
+<div id="btns" style="opacity: 0;">
 <button id="theBtnExport" onclick="exportExcel()" disabled="true" onfocus="$('#theBtnExport').blur()">Export Records</button>
+<button id="theBtnChart" onclick="toggleChart()" disabled="true" onfocus="$('theBtnChart').blur()">Show Chart</button>
 </div>
 <?php
 }
@@ -178,7 +194,7 @@ function timestop(evt) {
                     $("#aBlock").animate({opacity: "1"}, function() {
                         $("#sBlock").animate({opacity: "1"}, function() {
                             $("#tRecord1").animate({opacity: "1"}, function() {
-                                $("#btnExport").animate({opacity: "1"})
+                                $("#btns").animate({opacity: "1"})
                             });
                         })
                     })
@@ -271,6 +287,7 @@ function addRecord(timestr) {
     var recordCount = recordList.length;
     if(recordCount == 1) {
         $("#theBtnExport").attr('disabled', false);
+        $("#theBtnChart").attr('disabled', false);
     }
     $("#id_rec" + recordCount.toString()).text(recordCount);
     $("#time_rec" + recordCount.toString()).text(timestr);
@@ -279,6 +296,7 @@ function addRecord(timestr) {
     refreshStats();
     shuffleList.push($(".shuffle").text());
     datetimeList.push(getNowFormatDate());
+    refreshChart();
 }
 <?php
 }
@@ -475,10 +493,39 @@ function exportExcel() {
     }
     excelData = {};
     for(var i = 0; i < recordList.length; i++) {
-        excelData[i] = {"record": duration2Time(recordList[i]), "shuffle": shuffleList[i], "datetime": datetimeList[i]};
+        excelData[i] = {"duration": recordList[i], "record": duration2Time(recordList[i]), "shuffle": shuffleList[i], "datetime": datetimeList[i]};
     }
-    $("#jsonField").val(JSON.stringify(excelData));
+    $("#exportJsonField").val(JSON.stringify(excelData));
     $("#exportJson").submit();
 }
+
+function toggleChart() {
+    if(recordList.length < 1) {
+        alert("There is no records yet...");
+        return;
+    }
+    if($(".stopwatch").css("display") == "block") {
+        $(".stopwatch").slideToggle("normal", function() {
+            $(".imgChart").slideToggle("normal");
+        });
+    } else {
+        $(".imgChart").slideToggle("normal", function() {;
+            $(".stopwatch").slideToggle("normal");
+        });
+        
+    }
+}
+
+function refreshChart() {
+    recordData = '';
+    for(var i = 0; i < recordList.length; i++) {
+        if(i > 0) {
+            recordData += ',';
+        }
+        recordData += recordList[i];
+    }
+    $("#imgChart").attr("src", "chart.php?record=" + recordData);
+}
+
 </script>
 </html>
